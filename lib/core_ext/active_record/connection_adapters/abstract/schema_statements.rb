@@ -4,6 +4,7 @@ module ActiveRecord
       # Regexp used to find the function name and function argument of a
       # function call
       FUNCTIONAL_INDEX_REGEXP = /(\w+)\((\w+)\)/
+      COMPLEX_FUNCTIONAL_INDEX_REGEXP = /(\w+)\((.*?)\)/
 
       # Adds a new index to the table.  +column_name+ can be a single Symbol, or
       # an Array of Symbols.
@@ -150,6 +151,8 @@ module ActiveRecord
         column_names.map do |name|
           if name =~ FUNCTIONAL_INDEX_REGEXP
             "#{$1}(#{quote_column_name($2)})"
+          elsif name =~ COMPLEX_FUNCTIONAL_INDEX_REGEXP
+            name
           else
             quote_column_name(name)
           end
@@ -161,11 +164,22 @@ module ActiveRecord
       def expression_index_name(column_name)
         if column_name =~ FUNCTIONAL_INDEX_REGEXP
           "#{$1.downcase}_#{$2}"
+        elsif column_name =~ COMPLEX_FUNCTIONAL_INDEX_REGEXP
+          complex_function_to_index_name($1, $2)
         else
           column_name
         end
       end
       private :expression_index_name
+
+      def complex_function_to_index_name(function, arguments)
+        arguments = arguments.split(/,\s+/).collect { |argument|
+          argument.gsub(/'/, '').gsub(/::\w+/, '')
+        }.join('_').gsub(/(\A_|_\Z)/, '')
+
+        "#{function.downcase}_#{arguments}"
+      end
+      private :complex_function_to_index_name
     end
   end
 end

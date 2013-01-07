@@ -15,6 +15,8 @@ module ActiveRecord # :nodoc:
 
       # Regex to find columns used in index statements
       INDEX_COLUMN_EXPRESSION = /ON \w+(?: USING \w+ )?\((.+)\)/
+      # Regex to split column expression into columns (accounts for functions)
+      INDEX_COLUMNS_EXPRESSION = /(\w+|\w+\(.*\))(?:,|$)/
       # Regex to find where clause in index statements
       INDEX_WHERE_EXPRESION = /WHERE (.+)$/
 
@@ -90,18 +92,21 @@ module ActiveRecord # :nodoc:
           AND a.attnum IN (#{index[:keys].join(",")})
         SQL
 
-        column_names = columns.values_at(*index[:keys]).compact
-
-        if column_names.empty?
+        if index[:keys].include?('0')
           definition = index[:definition].sub(INDEX_WHERE_EXPRESION, '')
+
           if column_expression = definition.match(INDEX_COLUMN_EXPRESSION)[1]
-            column_names = column_expression.split(',').map do |functional_name|
+            column_expressions = column_expression.scan(INDEX_COLUMNS_EXPRESSION).flatten.map do |functional_name|
               remove_type(functional_name)
             end
+          else
+            column_expressions = []
           end
         end
 
-        column_names
+        index[:keys].collect.with_index do |key, index|
+          columns.fetch(key) { column_expressions[index] }
+        end
       end
 
       # Find where statement from index definition

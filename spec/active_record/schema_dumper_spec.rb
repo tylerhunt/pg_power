@@ -62,6 +62,10 @@ describe ActiveRecord::SchemaDumper do
         @dump.should =~ /add_index "pets", \["upper\(color\)"\].*:where => "\(name IS NULL\)"/
       end
 
+      it 'dumps complex functional indexes' do
+        @dump.should =~ /add_index "pets", \["to_tsvector\('english'::regconfig, name\)", "color"\]/
+      end
+
       it 'dumps indexes with non default access method' do
         @dump.should =~ Regexp.new(Regexp.quote('add_index "pets", ["user_id"], :name => "index_pets_on_user_id_gist", :using => "gist"'))
       end

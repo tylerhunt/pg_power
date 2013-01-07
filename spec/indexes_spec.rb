@@ -16,6 +16,12 @@ describe 'Indexes' do
       PgPower::Explorer.index_exists?(:pets, ["lower(name)", "lower(color)"] ).should be_true
     end
 
+    it 'should allow indexes with expressions using complex functions' do
+      ActiveRecord::Migration.add_index(:pets, ["to_tsvector('english'::regconfig, name)", "user_id"])
+
+      PgPower::Explorer.index_exists?(:pets, ["to_tsvector('english'::regconfig, name)", "user_id"]).should be_true
+    end
+
     # TODO support this canonical example
     it 'should allow indexes with advanced expressions' do
       pending "Not sophisticated enough for this yet"
@@ -38,6 +44,13 @@ describe 'Indexes' do
       ActiveRecord::Migration.remove_index(:pets, ["lower(name)", "lower(color)"])
 
       PgPower::Explorer.index_exists?(:pets, ["lower(name)", "lower(color)"] ).should be_false
+    end
+
+    it 'should remove indexes with expressions using complex functions' do
+      ActiveRecord::Migration.add_index(:pets, ["to_tsvector('english'::regconfig, name)", "user_id"])
+      ActiveRecord::Migration.remove_index(:pets, ["to_tsvector('english'::regconfig, name)", "user_id"])
+
+      PgPower::Explorer.index_exists?(:pets, ["to_tsvector('english'::regconfig, name)", "user_id"]).should be_false
     end
 
     it 'should remove indexes built with the :where option' do
